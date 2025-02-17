@@ -28,23 +28,23 @@ jobs:
           DARUJME_API_SECRET: ${{ secrets.DARUJME_API_SECRET }}
           DARUJME_TIMEFRAME: "week"
           DARUJME_OUTPUT_FILE: "./temp/darujme_data.json"
-        run: python download_darujme.py
+        run: python ./scripts/darujme.py
 
-      # Example of next step that uses the data
-      - name: Process the data
-        run: |
-          python process_data.py --input ./temp/darujme_data.json --output ./temp/results.csv
+      # # Example of next step that uses the data
+      # - name: Process the data
+      #   run: |
+      #     python process_data.py --input ./temp/darujme_data.json --output ./temp/results.csv
           
       # Store processed results using v4
-      - name: Store processed results
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: processed-results
-          path: ./temp/results.csv
-          retention-days: 1
-          compression-level: 9  # New in v4: maximum compression
-          overwrite: true      # New in v4: explicitly handle duplicates
+      # - name: Store processed results
+      #   if: success()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: processed-results
+      #     path: ./temp/results.csv
+      #     retention-days: 1
+      #     compression-level: 9  # New in v4: maximum compression
+      #     overwrite: true      # New in v4: explicitly handle duplicates
           
       # Clean up sensitive data
       - name: Clean up
