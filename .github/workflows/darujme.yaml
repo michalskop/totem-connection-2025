@@ -16,7 +16,7 @@ jobs:
           python-version: '3.x'
           
       - name: Install dependencies
-        run: pip install requests
+        run: pip install -r ./scripts/requirements.txt
         
       - name: Create temporary directory
         run: mkdir -p ./temp
