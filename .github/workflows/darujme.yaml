@@ -1,0 +1,52 @@
+name: Download Darujme Data
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Run daily at midnight
+  workflow_dispatch:
+
+jobs:
+  process-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+          
+      - name: Install dependencies
+        run: pip install requests
+        
+      - name: Create temporary directory
+        run: mkdir -p ./temp
+        
+      - name: Download data
+        env:
+          DARUJME_ORG_ID: ${{ secrets.DARUJME_ORG_ID }}
+          DARUJME_API_ID: ${{ secrets.DARUJME_API_ID || 'default_api_id' }}
+          DARUJME_API_SECRET: ${{ secrets.DARUJME_API_SECRET }}
+          DARUJME_TIMEFRAME: "week"
+          DARUJME_OUTPUT_FILE: "./temp/darujme_data.json"
+        run: python download_darujme.py
+
+      # Example of next step that uses the data
+      - name: Process the data
+        run: |
+          # Your processing script here
+          python process_data.py --input ./temp/darujme_data.json --output ./temp/results.csv
+          
+      # Example of storing processed results (if needed)
+      - name: Store processed results
+        if: success()
+        uses: actions/upload-artifact@v3
+        with:
+          name: processed-results
+          path: ./temp/results.csv
+          retention-days: 1  # Keep for minimum time
+          
+      # Clean up sensitive data
+      - name: Clean up
+        if: always()  # Run even if previous steps fail
+        run: |
+          rm -rf ./temp
