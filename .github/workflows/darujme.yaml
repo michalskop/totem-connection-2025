@@ -8,10 +8,10 @@ jobs:
   process-data:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.x'
           
@@ -24,7 +24,7 @@ jobs:
       - name: Download data
         env:
           DARUJME_ORG_ID: ${{ secrets.DARUJME_ORG_ID }}
-          DARUJME_API_ID: ${{ secrets.DARUJME_API_ID || 'default_api_id' }}
+          DARUJME_API_ID: ${{ secrets.DARUJME_API_ID }}
           DARUJME_API_SECRET: ${{ secrets.DARUJME_API_SECRET }}
           DARUJME_TIMEFRAME: "week"
           DARUJME_OUTPUT_FILE: "./temp/darujme_data.json"
@@ -33,20 +33,21 @@ jobs:
       # Example of next step that uses the data
       - name: Process the data
         run: |
-          # Your processing script here
           python process_data.py --input ./temp/darujme_data.json --output ./temp/results.csv
           
-      # Example of storing processed results (if needed)
+      # Store processed results using v4
       - name: Store processed results
         if: success()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: processed-results
           path: ./temp/results.csv
-          retention-days: 1  # Keep for minimum time
+          retention-days: 1
+          compression-level: 9  # New in v4: maximum compression
+          overwrite: true      # New in v4: explicitly handle duplicates
           
       # Clean up sensitive data
       - name: Clean up
-        if: always()  # Run even if previous steps fail
+        if: always()
         run: |
           rm -rf ./temp
