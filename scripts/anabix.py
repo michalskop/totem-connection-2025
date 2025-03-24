@@ -617,32 +617,26 @@ def update_existing_donors_list(
   
   return results
 
-def read_darujme_projects(filepath: str = "./temp/darujme_projects.json") -> Dict[int, str]:
-  """
-  Reads and parses the Darujme projects data file
-  
-  Args:
-    filepath: Path to the darujme_projects.json file
-  Returns:
-    Dictionary mapping project IDs to their Czech titles
-  """
-  try:
-    with open(filepath, 'r', encoding='utf-8') as f:
-      data = json.load(f)
-      projects = {}
-      
-      for project in data.get('projects', []):
-        project_id = project.get('projectId')
-        title_cs = project.get('title', {}).get('cs')
-        
-        if project_id and title_cs:
-          projects[project_id] = title_cs
-      
-      return projects
-      
-  except (IOError, json.JSONDecodeError) as e:
-    print(f"Error reading Darujme projects data: {e}")
-    return {}
+def read_darujme_projects(filepath: str = "./temp/darujme_projects.json") -> Dict[str, str]:
+    """
+    Reads and parses the Darujme projects file
+    
+    Args:
+        filepath: Path to the darujme_projects.json file
+    Returns:
+        Dictionary mapping project IDs to their titles
+    """
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            # Create a dictionary from projects array
+            return {
+                str(project['projectId']): project['title']['cs']
+                for project in data.get('projects', [])
+            }
+    except (IOError, json.JSONDecodeError) as e:
+        print(f"Error reading Darujme projects: {e}")
+        return {}
 
 def process_darujme_donors(
   url: str,
@@ -1144,37 +1138,101 @@ def get_activity_custom_fields(
   """
   return ACTIVITY_CUSTOM_FIELDS
 
+def test_single_pledge():
+    """
+    Test function to process a single pledge step by step
+    """
+    print("\n=== Testing Single Pledge Processing ===\n")
+    
+    # Read test data
+    pledges = read_darujme_data("./temp/darujme_data.json")
+    if not pledges:
+        print("No pledges found")
+        return
+    
+    # Get first pledge
+    first_pledge = pledges[0]
+    print(f"Testing with pledge ID: {first_pledge.get('pledgeId')}")
+    
+    # Get project title
+    projects = read_darujme_projects("./temp/darujme_projects.json")
+    project_id = first_pledge.get('projectId')
+    project_title = projects.get(str(project_id))
+    if not project_title:
+        print(f"Project {project_id} not found")
+        return
+    
+    print(f"Project title: {project_title}")
+    
+    # Get contact ID
+    donor_email = first_pledge.get('donor', {}).get('email')
+    contact_id = find_contact_by_email(url=API_URL, username=username, token=token, email=donor_email)
+    if not contact_id:
+        print(f"Contact not found for email: {donor_email}")
+        return
+    
+    print(f"Contact ID: {contact_id}")
+    
+    # Get or create deal
+    deal_id = get_or_create_deal(url=API_URL, username=username, token=token, title=project_title, contact_id=contact_id)
+    if not deal_id:
+        print("Failed to get or create deal")
+        return
+    
+    print(f"Deal ID: {deal_id}")
+    
+    # Create activity
+    activity_id = create_darujme_pledge_activity(
+        url=API_URL,
+        username=username,
+        token=token,
+        contact_id=contact_id,
+        deal_id=deal_id,
+        pledge=first_pledge,
+        custom_field_ids=ACTIVITY_CUSTOM_FIELDS,
+        check_duplicates=True
+    )
+    
+    if activity_id:
+        print(f"\nSuccess! Activity created with ID: {activity_id}")
+    else:
+        print("\nNo activity created (possibly duplicate)")
+
 if __name__ == "__main__":
-  # Load environment variables
-  load_dotenv()
-  
-  # Get credentials
-  username = os.getenv("ANABIX_USERNAME")
-  token = os.getenv("ANABIX_API_TOKEN")
-  
-  if not all([username, token]):
-    print("Error: Missing required environment variables")
-    print("Please set ANABIX_USERNAME and ANABIX_API_TOKEN")
-    exit(1)
-  
-  # Process donors
-  results = process_darujme_donors(
-    url=API_URL,
-    username=username,
-    token=token,
-    list_id=INDIVIDUAL_DONORS_LIST_ID
-  )
-  
-  # Print results
-  print("\nProcessing Results:")
-  print(f"Pledges processed: {results.get('processed_pledges', 0)}")
-  print(f"New donors: {results.get('new_donors', 0)}")
-  print(f"Existing donors: {results.get('existing_donors', 0)}")
-  print(f"Activities created: {results.get('activities_created', 0)}")
-  
-  if results.get('errors'):
-    print("\nErrors:")
-    for error in results['errors']:
-      print(f"- {error}")
+    # Load environment variables
+    load_dotenv()
+    
+    # Get credentials
+    username = os.getenv("ANABIX_USERNAME")
+    token = os.getenv("ANABIX_API_TOKEN")
+    
+    if not all([username, token]):
+        print("Error: Missing required environment variables")
+        print("Please set ANABIX_USERNAME and ANABIX_API_TOKEN")
+        exit(1)
+    
+    # Run test function if TEST environment variable is set
+    if os.getenv("TEST"):
+        test_single_pledge()
+    else:
+        # Process all donors (original functionality)
+        results = process_darujme_donors(
+            url=API_URL,
+            username=username,
+            token=token,
+            list_id=INDIVIDUAL_DONORS_LIST_ID
+        )
+        
+        # Print results
+        print("\nProcessing Results:")
+        print(f"Pledges processed: {results.get('processed_pledges', 0)}")
+        print(f"New donors: {results.get('new_donors', 0)}")
+        print(f"Existing donors: {results.get('existing_donors', 0)}")
+        print(f"Activities created: {results.get('activities_created', 0)}")
+        
+        if results.get('errors'):
+            print("\nErrors:")
+            for error in results['errors']:
+                print(f"- {error}")
 
 
