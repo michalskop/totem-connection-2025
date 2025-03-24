@@ -2,7 +2,7 @@ name: Process Darujme Donations
 on:
   schedule:
     - cron: '0 0 * * *'  # Run daily at midnight
-    # - cron: '0 12 * * *'  # Run daily at noon
+    - cron: '0 12 * * *'  # Run daily at noon
   workflow_dispatch:
 
 jobs:
