@@ -1,11 +1,11 @@
-name: Download Darujme Data
+name: Process Darujme Donations
 on:
   schedule:
     - cron: '0 0 * * *'  # Run daily at midnight
   workflow_dispatch:
 
 jobs:
-  process-data:
+  process-donations:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,15 +21,22 @@ jobs:
       - name: Create temporary directory
         run: mkdir -p ./temp
         
-      - name: Download data
+      - name: Download Darujme data
         env:
           DARUJME_ORG_ID: ${{ secrets.DARUJME_ORG_ID }}
           DARUJME_API_ID: ${{ secrets.DARUJME_API_ID }}
           DARUJME_API_SECRET: ${{ secrets.DARUJME_API_SECRET }}
           DARUJME_TIMEFRAME: "week"
           DARUJME_OUTPUT_FILE: "./temp/darujme_data.json"
+          DARUJME_PROJECTS_FILE: "./temp/darujme_projects.json"
         run: python ./scripts/darujme.py
 
+      - name: Update Anabix
+        env:
+          ANABIX_USERNAME: ${{ secrets.ANABIX_USERNAME }}
+          ANABIX_API_TOKEN: ${{ secrets.ANABIX_API_TOKEN }}
+        run: python ./scripts/anabix.py
+          
       # # Example of next step that uses the data
       # - name: Process the data
       #   run: |
